@@ -4,6 +4,7 @@
 # .tfstate files
 *.tfstate
 *.tfstate.*
+.terraform
 
 # Crash log files
 crash.log
@@ -46,5 +47,8 @@ lacework-cli.yml
 
 # Environment files
 .env 
+
+# Local repo clone for reference
+reference/
 
 scratchpad
