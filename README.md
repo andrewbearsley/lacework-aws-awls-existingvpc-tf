@@ -90,6 +90,7 @@ Look for an outbound rule (IsEgress: true) that allows HTTPS (port 443) traffic 
 
 ```bash
 # In the terraform directory where main.tf is located
+# Update the terraform/main.tf file with these values.
 terraform init
 terraform plan
 terraform apply

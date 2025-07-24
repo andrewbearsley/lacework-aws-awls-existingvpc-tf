@@ -210,10 +210,23 @@ display_summary() {
   echo "VPC ID: $VPC_ID"
   echo "Subnet ID: $SUBNET_ID"
   echo "Security Group ID: $SECURITY_GROUP_ID"
+  echo "AWS Region: $AWS_REGION"
   
   echo ""
   echo "You can now use these values in your Terraform configuration."
   echo "Update the terraform/main.tf file with these values."
+  
+  # Check if main.tf exists and contains a hardcoded region
+  MAIN_TF_PATH="../terraform/main.tf"
+  if [ -f "$MAIN_TF_PATH" ]; then
+    HARDCODED_REGION=$(grep -o 'region = "[^"]*"' "$MAIN_TF_PATH" | cut -d'"' -f2)
+    
+    if [ ! -z "$HARDCODED_REGION" ] && [ "$HARDCODED_REGION" != "$AWS_REGION" ]; then
+      echo -e "\n${YELLOW}⚠️  Warning: The region in terraform/main.tf ($HARDCODED_REGION) does not match your AWS_REGION ($AWS_REGION)${NC}"
+      echo "You should update the region in terraform/main.tf to match your AWS_REGION:"
+      echo -e "${BOLD}provider \"aws\" {\n  region = \"$AWS_REGION\"\n}${NC}"
+    fi
+  fi
   
   success "Resource lookup complete!"
 }
@@ -287,7 +300,16 @@ main() {
   
   section "Next Steps"
   echo "1. Navigate to the terraform directory"
-  echo "2. Update the terraform/main.tf file with these values."
+  echo "2. Update the terraform/main.tf file with these values:"
+  echo -e "   ${BOLD}vpc_id             = \"$VPC_ID\"${NC}"
+  echo -e "   ${BOLD}security_group_id = \"$SECURITY_GROUP_ID\"${NC}"
+  echo -e "   ${BOLD}subnet_id          = \"$SUBNET_ID\"${NC}"
+  if [ -f "../terraform/main.tf" ]; then
+    HARDCODED_REGION=$(grep -o 'region = "[^"]*"' "../terraform/main.tf" | cut -d'"' -f2)
+    if [ ! -z "$HARDCODED_REGION" ] && [ "$HARDCODED_REGION" != "$AWS_REGION" ]; then
+      echo -e "   ${BOLD}region             = \"$AWS_REGION\"${NC} (currently set to \"$HARDCODED_REGION\")"
+    fi
+  fi
   echo "3. Run: terraform init"
   echo "4. Run: terraform plan"
   echo "5. Run: terraform apply"
