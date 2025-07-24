@@ -218,13 +218,67 @@ display_summary() {
   success "Resource lookup complete!"
 }
 
+# Check if required AWS environment variables are set
+check_aws_env() {
+  local missing_vars=false
+  
+  if [ -z "$AWS_ACCOUNT_ID" ]; then
+    missing_vars=true
+  fi
+  
+  if [ -z "$AWS_REGION" ]; then
+    missing_vars=true
+  fi
+  
+  if [ -z "$AWS_PROFILE" ]; then
+    missing_vars=true
+  fi
+  
+  # If any required variables are missing, show helper text
+  if [ "$missing_vars" = true ]; then
+    echo -e "${YELLOW}Required AWS environment variables are not set.${NC}"
+    echo -e "Please set the following environment variables before running this script:\n"
+    echo -e "${BOLD}export AWS_ACCOUNT_ID=[Your AWS Account ID] && \\
+    export AWS_REGION=[Your AWS Region] && \\
+    export AWS_PROFILE=[Your AWS Profile] && \\
+    export AWS_PAGER=""${NC}\n"
+    echo -e "Example:\n"
+    echo -e "${BOLD}export AWS_ACCOUNT_ID=631604671854 && \\
+    export AWS_REGION=ap-southeast-2 && \\
+    export AWS_PROFILE=sandbox-admin && \\
+    export AWS_PAGER=""${NC}\n"
+    
+    prompt "Do you want to set these variables now? (y/n):"
+    read SET_VARS
+    
+    if [[ $SET_VARS == "y" || $SET_VARS == "Y" ]]; then
+      setup_aws_env
+    else
+      echo "Exiting script. Please set the required environment variables and try again."
+      exit 1
+    fi
+  else
+    # If variables are already set, just display them
+    echo "AWS Environment Variables:"
+    echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID"
+    echo "AWS_REGION=$AWS_REGION"
+    echo "AWS_PROFILE=$AWS_PROFILE"
+    echo "AWS_PAGER=$AWS_PAGER"
+  fi
+}
+
 # Main execution
 main() {
   echo -e "${BOLD}Lacework Agentless Scanning - AWS Resource Lookup${NC}"
   echo "This script will help you identify the AWS resources needed for deployment."
   echo ""
   
-  setup_aws_env
+  # Always set AWS_PAGER to empty string
+  export AWS_PAGER=""
+  
+  # Check if required AWS environment variables are set
+  check_aws_env
+  
   list_vpcs
   find_subnets
   find_security_groups
@@ -233,9 +287,10 @@ main() {
   
   section "Next Steps"
   echo "1. Navigate to the terraform directory"
-  echo "2. Run: terraform init"
-  echo "3. Run: terraform plan"
-  echo "4. Run: terraform apply"
+  echo "2. Update the terraform/main.tf file with these values."
+  echo "3. Run: terraform init"
+  echo "4. Run: terraform plan"
+  echo "5. Run: terraform apply"
 }
 
 # Run the script
