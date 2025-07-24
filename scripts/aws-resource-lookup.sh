@@ -118,30 +118,87 @@ find_subnets() {
 # Find security groups for the selected VPC
 find_security_groups() {
   section "3. Finding security groups for VPC: $VPC_ID"
-  aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$VPC_ID" \
-    --query "SecurityGroups[*].[GroupId,GroupName]" --output table
   
-  prompt "Enter the Security Group ID you want to use (sg-xxxxxxxx):"
-  read SECURITY_GROUP_ID
+  # Get security groups and save to variable
+  SG_LIST=$(aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$VPC_ID" --output json)
+  
+  # Display security groups in table format with egress information
+  echo "Security Groups for VPC: $VPC_ID"
+  echo "-------------------------------------------------------------------------"
+  echo "| Security Group ID       | Name                 | Has HTTPS Egress    |"
+  echo "-------------------------------------------------------------------------"
+  
+  # Process each security group
+  SG_IDS=($(echo $SG_LIST | jq -r '.SecurityGroups[].GroupId'))
+  
+  for sg in ${SG_IDS[@]}; do
+    # Get security group details
+    SG_NAME=$(echo $SG_LIST | jq -r ".SecurityGroups[] | select(.GroupId == \"$sg\") | .GroupName")
+    
+    # Check for HTTPS egress rule
+    SG_RULES=$(aws ec2 describe-security-group-rules --filter "Name=group-id,Values=$sg" --output json)
+    
+    # Check if there's an egress rule allowing HTTPS (port 443) or all traffic (-1)
+    HAS_HTTPS_EGRESS=$(echo $SG_RULES | jq -r '.SecurityGroupRules[] | select(.IsEgress == true) | select((.IpProtocol == "-1") or (.IpProtocol == "tcp" and .FromPort <= 443 and .ToPort >= 443))' | wc -l)
+    
+    if [ $HAS_HTTPS_EGRESS -gt 0 ]; then
+      EGRESS_STATUS="Yes"
+    else
+      EGRESS_STATUS="No"
+    fi
+    
+    # Print security group information
+    printf "| %-24s | %-21s | %-19s |\n" "$sg" "$SG_NAME" "$EGRESS_STATUS"
+  done
+  
+  echo "-------------------------------------------------------------------------"
+  echo "Note: 'Has HTTPS Egress' indicates if the security group allows outbound HTTPS (port 443) traffic"
+  echo ""
+  
+  # Count number of security groups
+  SG_COUNT=$(echo $SG_LIST | jq '.SecurityGroups | length')
+  
+  # If only one security group exists, select it automatically
+  if [ "$SG_COUNT" -eq 1 ]; then
+    SECURITY_GROUP_ID=$(echo $SG_LIST | jq -r '.SecurityGroups[0].GroupId')
+    echo "Only one security group found. Automatically selecting: $SECURITY_GROUP_ID"
+  else
+    prompt "Enter the Security Group ID you want to use (sg-xxxxxxxx):"
+    read SECURITY_GROUP_ID
+  fi
+  
   export SECURITY_GROUP_ID=$SECURITY_GROUP_ID
-  
   success "Security Group ID set to: $SECURITY_GROUP_ID"
 }
 
 # Verify security group allows outbound HTTPS traffic
 verify_security_group() {
   section "4. Verifying security group allows outbound HTTPS traffic"
+  
+  # Get security group rules
+  SG_RULES=$(aws ec2 describe-security-group-rules --filter "Name=group-id,Values=$SECURITY_GROUP_ID" --output json)
+  
+  # Display the rules
   aws ec2 describe-security-group-rules --filter "Name=group-id,Values=$SECURITY_GROUP_ID"
   
-  echo ""
-  echo "Please verify that the security group has an outbound rule (IsEgress: true)"
-  echo "that allows HTTPS (port 443) traffic or all traffic (IpProtocol: \"-1\")."
+  # Check if there's an egress rule allowing HTTPS (port 443) or all traffic (-1)
+  HAS_HTTPS_EGRESS=$(echo $SG_RULES | jq -r '.SecurityGroupRules[] | select(.IsEgress == true) | select((.IpProtocol == "-1") or (.IpProtocol == "tcp" and .FromPort <= 443 and .ToPort >= 443))' | wc -l)
   
-  prompt "Does the security group have the required outbound rule? (y/n):"
-  read CONFIRM
-  if [[ $CONFIRM != "y" && $CONFIRM != "Y" ]]; then
-    echo "Please update your security group to allow outbound HTTPS traffic and try again."
-    exit 1
+  if [ $HAS_HTTPS_EGRESS -gt 0 ]; then
+    echo ""
+    success "✓ Security group has the required outbound HTTPS access."
+    echo ""
+  else
+    echo ""
+    echo "⚠️ Warning: The security group does not appear to have an outbound rule allowing HTTPS traffic."
+    echo "Please verify the security group rules and ensure it allows outbound HTTPS (port 443) traffic."
+    
+    prompt "Do you want to continue anyway? (y/n):"
+    read CONFIRM
+    if [[ $CONFIRM != "y" && $CONFIRM != "Y" ]]; then
+      echo "Please update your security group to allow outbound HTTPS traffic and try again."
+      exit 1
+    fi
   fi
   
   success "Security group verification complete!"
