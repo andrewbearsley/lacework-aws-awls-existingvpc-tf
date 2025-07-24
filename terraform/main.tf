@@ -32,5 +32,4 @@ module "lacework_aws_agentless_scanning_singleregion" {
   security_group_id       = var.security_group_id
   use_existing_subnet     = true
   subnet_id               = var.subnet_id
-  scan_frequency          = 24
 }
