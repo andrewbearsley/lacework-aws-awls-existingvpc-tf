@@ -214,17 +214,16 @@ display_summary() {
   
   echo ""
   echo "You can now use these values in your Terraform configuration."
-  echo "Update the terraform/main.tf file with these values."
+  echo "Update the terraform/terraform.tfvars file with these values."
   
-  # Check if main.tf exists and contains a hardcoded region
-  MAIN_TF_PATH="../terraform/main.tf"
-  if [ -f "$MAIN_TF_PATH" ]; then
-    HARDCODED_REGION=$(grep -o 'region = "[^"]*"' "$MAIN_TF_PATH" | cut -d'"' -f2)
+  # Check if terraform.tfvars exists and contains a different region
+  TFVARS_PATH="../terraform/terraform.tfvars"
+  if [ -f "$TFVARS_PATH" ]; then
+    CURRENT_REGION=$(grep -o 'aws_region[[:space:]]*=[[:space:]]*"[^"]*"' "$TFVARS_PATH" | cut -d'"' -f2)
     
-    if [ ! -z "$HARDCODED_REGION" ] && [ "$HARDCODED_REGION" != "$AWS_REGION" ]; then
-      echo -e "\n${YELLOW}⚠️  Warning: The region in terraform/main.tf ($HARDCODED_REGION) does not match your AWS_REGION ($AWS_REGION)${NC}"
-      echo "You should update the region in terraform/main.tf to match your AWS_REGION:"
-      echo -e "${BOLD}provider \"aws\" {\n  region = \"$AWS_REGION\"\n}${NC}"
+    if [ ! -z "$CURRENT_REGION" ] && [ "$CURRENT_REGION" != "$AWS_REGION" ]; then
+      echo -e "\n${YELLOW}⚠️  Warning: The region in terraform/terraform.tfvars ($CURRENT_REGION) does not match your AWS_REGION ($AWS_REGION)${NC}"
+      echo "You should update the region in terraform/terraform.tfvars to match your AWS_REGION."
     fi
   fi
   
@@ -300,16 +299,11 @@ main() {
   
   section "Next Steps"
   echo "1. Navigate to the terraform directory"
-  echo "2. Update the terraform/main.tf file with these values:"
-  echo -e "   ${BOLD}vpc_id             = \"$VPC_ID\"${NC}"
+  echo "2. Update the terraform/terraform.tfvars file with these values:"
+  echo -e "   ${BOLD}aws_region        = \"$AWS_REGION\"${NC}"
+  echo -e "   ${BOLD}vpc_id            = \"$VPC_ID\"${NC}"
   echo -e "   ${BOLD}security_group_id = \"$SECURITY_GROUP_ID\"${NC}"
-  echo -e "   ${BOLD}subnet_id          = \"$SUBNET_ID\"${NC}"
-  if [ -f "../terraform/main.tf" ]; then
-    HARDCODED_REGION=$(grep -o 'region = "[^"]*"' "../terraform/main.tf" | cut -d'"' -f2)
-    if [ ! -z "$HARDCODED_REGION" ] && [ "$HARDCODED_REGION" != "$AWS_REGION" ]; then
-      echo -e "   ${BOLD}region             = \"$AWS_REGION\"${NC} (currently set to \"$HARDCODED_REGION\")"
-    fi
-  fi
+  echo -e "   ${BOLD}subnet_id         = \"$SUBNET_ID\"${NC}"
   echo "3. Run: terraform init"
   echo "4. Run: terraform plan"
   echo "5. Run: terraform apply"

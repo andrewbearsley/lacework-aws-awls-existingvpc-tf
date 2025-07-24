@@ -52,7 +52,29 @@ lacework configure
 
 ## Finding Required AWS Resources (VPC, Subnet, Security Group)
 
-Use these AWS CLI commands to identify your existing resources for deployment:
+You can identify your existing AWS resources using either the automated script (recommended) or manual AWS CLI commands.
+
+### Option 1: Automated Script (Recommended)
+
+Use the provided script to automatically discover and configure your AWS resources:
+
+```bash
+# Run the AWS resource lookup script
+./scripts/aws-resource-lookup.sh
+```
+
+This script will:
+- Check for required AWS environment variables
+- List available VPCs and auto-select if only one exists
+- Display subnets for your selected VPC
+- Show security groups with HTTPS egress status
+- Auto-select security groups if only one exists
+- Verify security group rules for outbound HTTPS access
+- Provide the exact values to update in `terraform/terraform.tfvars`
+
+### Option 2: Manual AWS CLI Commands
+
+Alternatively, you can manually identify your existing resources using these AWS CLI commands:
 
 ### 1. List VPCs in a region
 
@@ -86,11 +108,25 @@ aws ec2 describe-security-group-rules --filter "Name=group-id,Values=sg-xxxxxxxx
 
 Look for an outbound rule (IsEgress: true) that allows HTTPS (port 443) traffic or all traffic (IpProtocol: "-1").
 
+After identifying your resources manually, update the `terraform/terraform.tfvars` file with your values:
+
+```hcl
+aws_region        = "your-region"
+vpc_id            = "vpc-xxxxxxxx"
+security_group_id = "sg-xxxxxxxx"
+subnet_id         = "subnet-xxxxxxxx"
+```
+
 ## Deploying the Terraform Configuration
 
 ```bash
 # In the terraform directory where main.tf is located
-# Update the terraform/main.tf file with these values.
+# Update the terraform/terraform.tfvars file with your AWS resource values:
+# aws_region        = "your-region"
+# vpc_id            = "vpc-xxxxxxxx"
+# security_group_id = "sg-xxxxxxxx"
+# subnet_id         = "subnet-xxxxxxxx"
+
 terraform init
 terraform plan
 terraform apply
