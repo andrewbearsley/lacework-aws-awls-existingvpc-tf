@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This project is for the purpose of creating Lacework FortiCNAPP AWS agentless workload scanning, using an existing VPC, deployed via terraform.
+This project is for the purpose of creating Lacework FortiCNAPP AWS agentless workload scanning, using an existing VPC/subnet/security group, deployed via terraform.
 
 ## References
 
@@ -52,11 +52,11 @@ lacework configure
 
 ## Finding Required AWS Resources (VPC, Subnet, Security Group)
 
-You can identify your existing AWS resources using either the automated script (recommended) or manual AWS CLI commands.
+You can identify your existing AWS VPC, Subnet and Security Group resources using either the automated script or manual AWS CLI commands.
 
-### Option 1: Automated Script (Recommended)
+### Option 1: Automated Script
 
-Use the provided script to automatically discover and configure your AWS resources:
+Use the provided script to automatically discover and configure AWS VPC, Subnet and Security Group resources:
 
 ```bash
 # Run the AWS resource lookup script
@@ -65,16 +65,15 @@ Use the provided script to automatically discover and configure your AWS resourc
 
 This script will:
 - Check for required AWS environment variables
-- List available VPCs and auto-select if only one exists
-- Display subnets for your selected VPC
-- Show security groups with HTTPS egress status
-- Auto-select security groups if only one exists
-- Verify security group rules for outbound HTTPS access
-- Provide the exact values to update in `terraform/terraform.tfvars`
+- List available VPCs for your AWS account
+- List subnets for the VPC
+- List security groups for the subnet
+- Verify security group for outbound HTTPS access
+- Provide the values for you to update in `terraform/terraform.tfvars`
 
 ### Option 2: Manual AWS CLI Commands
 
-Alternatively, you can manually identify your existing resources using these AWS CLI commands:
+Manually identify your existing AWS VPC, Subnet and Security Group resources using these AWS CLI commands:
 
 ### 1. List VPCs in a region
 
